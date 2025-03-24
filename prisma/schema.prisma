@@ -1,0 +1,418 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ProjectStatus {
+  PENDING_VALIDATION
+  IN_PROGRESS
+  COMPLETED
+  PUBLISHED
+  FUTURE
+  PERSONAL
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum PaymentType {
+  CLIENT
+  PRESTATAIRE
+  SUBSCRIPTION
+  OTHER
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  CARD
+  CASH
+  CHECK
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  COMPLETE
+  REFUNDED
+  CANCELLED
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  avatar    String?  // URL de la photo de profil
+
+  tasks     Task[]   @relation("UserTasks")
+  projects  Project[] @relation("UserProjects")
+  uploads   Upload[] // Relation vers les fichiers téléchargés
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  logo      String?  // URL du logo
+  documents String[] // URLs des documents
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects  Project[]
+  payments  Payment[]
+}
+
+model Prestataire {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  role      String?
+  avatar    String?  // URL de la photo
+  portfolio String[] // URLs des images de portfolio
+  documents String[] // URLs des documents (certifications, etc.)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  payments  Payment[]
+  projectPrestataires ProjectPrestataire[]
+}
+
+model Project {
+  id          String         @id @default(cuid())
+  name        String
+  status      ProjectStatus  @default(PENDING_VALIDATION)
+  description String?
+  startDate   DateTime?      // Date de début du projet
+  endDate     DateTime?      // Date de fin prévue du projet
+  totalPrice  Decimal?       // Prix total du projet
+  currency    String         @default("EUR")
+  fcfaEquivalent Decimal?    // Équivalent en FCFA du prix total
+  exchangeRateDate DateTime? // Date du taux de change utilisé
+  isFixedPrice Boolean       @default(true) // Si true, prix fixe, sinon prix calculé depuis les parties
+  images      String[]       // URLs des images du projet
+  documents   String[]       // URLs des documents
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  // Relation vers le client
+  clientId String?
+  client   Client?        @relation(fields: [clientId], references: [id])
+
+  // Relation vers l'utilisateur proprietaire/assignation principale
+  userId String?
+  user   User?           @relation("UserProjects", fields: [userId], references: [id])
+
+  // Relations
+  tasks         Task[]
+  payments      Payment[]
+  projectParts  ProjectPart[]    // Parties du projet avec prix individuels
+  projectPrestataires ProjectPrestataire[] // Association avec prestataires
+
+  // Many-to-many Tools
+  projectTools ProjectTool[]
+
+  // Many-to-many Agents
+  projectAgents ProjectAgent[]
+
+  // Devis
+  devis Devis[]
+  
+  // Contrats
+  contrats Contrat[]
+  
+  // Abonnements projet
+  projectSubscriptions ProjectSubscription[]
+}
+
+model ProjectPart {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Decimal  @default(0.0)
+  fcfaEquivalent Decimal? // Équivalent en FCFA du prix de la partie
+  completed   Boolean  @default(false)
+  
+  // Relation vers le projet
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  // Relation vers les tâches associées
+  tasks       Task[]
+}
+
+model ProjectPrestataire {
+  id           String    @id @default(cuid())
+  role         String?   // Rôle du prestataire dans ce projet
+  hourlyRate   Decimal?  // Taux horaire si applicable
+  fixedAmount  Decimal?  // Montant fixe si applicable
+  
+  // Relations
+  projectId     String
+  project       Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  prestataireId String
+  prestataire   Prestataire  @relation(fields: [prestataireId], references: [id])
+  
+  @@unique([projectId, prestataireId])
+}
+
+model Task {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus  @default(TODO)
+  priority    TaskPriority @default(MEDIUM)
+  dueDate     DateTime?
+  estimatedHours Decimal? // Heures estimées pour cette tâche
+  actualHours   Decimal? // Heures réelles passées
+  attachments String[]    // URLs des pièces jointes
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relation vers le projet
+  projectId String?
+  project   Project?     @relation(fields: [projectId], references: [id])
+  
+  // Relation vers la partie du projet
+  projectPartId String?
+  projectPart   ProjectPart? @relation(fields: [projectPartId], references: [id])
+
+  // Relation vers l'utilisateur affecté à la tâche
+  assignedToId String?
+  assignedTo   User?  @relation("UserTasks", fields: [assignedToId], references: [id])
+  
+  // Relation hiérarchique (sous-tâches)
+  parentTaskId String?
+  parentTask   Task?    @relation("SubTasks", fields: [parentTaskId], references: [id])
+  subTasks     Task[]   @relation("SubTasks")
+  
+  // Commentaires sur la tâche
+  comments     TaskComment[]
+}
+
+model TaskComment {
+  id        String    @id @default(cuid())
+  content   String
+  attachments String[] // URLs des pièces jointes
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  
+  // Relation vers la tâche
+  taskId    String
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  
+  // Auteur du commentaire (peut être un identifiant d'utilisateur)
+  authorId  String?
+}
+
+model Payment {
+  id           String       @id @default(cuid())
+  paymentType  PaymentType
+  amount       Decimal      @default(0.0)
+  date         DateTime     @default(now())
+  description  String?
+  paymentMethod PaymentMethod @default(BANK_TRANSFER)
+  status       PaymentStatus @default(PENDING)
+  reference    String?      // Numéro de référence ou facture
+  
+  // Paiement partiel ou total
+  isPartial    Boolean      @default(false)
+  partNumber   Int?         // Numéro du paiement partiel
+  totalParts   Int?         // Nombre total de paiements prévus
+
+  // Relation vers le projet
+  projectId    String?
+  project      Project?    @relation(fields: [projectId], references: [id])
+
+  // Relation vers le client
+  clientId     String?
+  client       Client?     @relation(fields: [clientId], references: [id])
+
+  // Relation vers l'abonnement
+  subscriptionId  String?
+  subscription    Subscription? @relation(fields: [subscriptionId], references: [id])
+
+  // Relation vers le prestataire
+  prestataireId  String?
+  prestataire    Prestataire?  @relation(fields: [prestataireId], references: [id])
+}
+
+model Subscription {
+  id             String       @id @default(cuid())
+  serviceName    String
+  cost           Decimal      @default(0.0)
+  billingCycle   BillingCycle @default(MONTHLY)
+  nextBillingDate DateTime
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  payments        Payment[]
+  projectSubscriptions ProjectSubscription[]
+}
+
+model ProjectSubscription {
+  id             String       @id @default(cuid())
+  startDate      DateTime     @default(now())
+  endDate        DateTime?
+  
+  // Relations
+  projectId      String
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+  
+  @@unique([projectId, subscriptionId])
+}
+
+model Agent {
+  id          String         @id @default(cuid())
+  name        String
+  description String?
+  version     String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  projectAgents ProjectAgent[]
+}
+
+model Tool {
+  id          String         @id @default(cuid())
+  name        String
+  description String?
+  cost        Decimal        @default(0.0)
+  free        Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  projectTools ProjectTool[]
+}
+
+model ProjectAgent {
+  projectId String
+  agentId   String
+
+  project   Project @relation(fields: [projectId], references: [id])
+  agent     Agent   @relation(fields: [agentId], references: [id])
+
+  @@id([projectId, agentId])
+}
+
+model ProjectTool {
+  projectId String
+  toolId    String
+
+  project   Project @relation(fields: [projectId], references: [id])
+  tool      Tool    @relation(fields: [toolId], references: [id])
+
+  @@id([projectId, toolId])
+}
+
+model Devis {
+  id        String   @id @default(cuid())
+  reference String
+  total     Decimal  @default(0.0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  status    String?  @default("DRAFT") // DRAFT, SENT, ACCEPTED, DECLINED
+  validUntil DateTime?
+  document  String?  // URL du document de devis signé
+
+  // Relation vers le projet
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id])
+  
+  // Éléments détaillés du devis
+  items     DevisItem[]
+}
+
+model DevisItem {
+  id          String   @id @default(cuid())
+  description String
+  quantity    Int      @default(1)
+  unitPrice   Decimal  @default(0.0)
+  total       Decimal  @default(0.0)
+  
+  // Relation vers le devis
+  devisId     String
+  devis       Devis    @relation(fields: [devisId], references: [id], onDelete: Cascade)
+}
+
+model Contrat {
+  id        String   @id @default(cuid())
+  title     String
+  content   String?
+  status    String   @default("DRAFT") // DRAFT, SENT, SIGNED, CANCELLED
+  signedAt  DateTime?
+  document  String?  // URL du document de contrat signé
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relation vers le projet
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id])
+}
+
+// Modèle pour gérer les uploads de fichiers
+model Upload {
+  id           String   @id @default(cuid())
+  fileName     String   // Nom original du fichier
+  fileSize     Int      // Taille du fichier en octets
+  fileType     String   // Type MIME du fichier
+  filePath     String   // Chemin relatif du fichier sur le serveur
+  publicUrl    String   // URL publique pour accéder au fichier
+  uploadType   String   // Type d'upload: 'avatar', 'client', 'provider', 'document', etc.
+  relatedId    String?  // ID de l'entité liée (client, prestataire, etc.)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relation vers l'utilisateur qui a téléchargé le fichier
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@index([uploadType, relatedId])
+}
+
+// Table pour stocker les taux de change
+model ExchangeRate {
+  id          String    @id @default(cuid())
+  sourceCurrency String
+  targetCurrency String
+  rate        Decimal
+  date        DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([sourceCurrency, targetCurrency, date])
+  @@index([date])
+}
