@@ -1,15 +1,1968 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
+model Permission {
+  id              String           @id @default(cuid())
+  action          PermissionAction
+  resourceType    ResourceType
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  role         Role
+  permissionId String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([role, permissionId])
+}
+
+model Company {
+  id                    String                  @id @default(cuid())
+  name                  String
+  email                 String?
+  phone                 String?
+  address               String?
+  subscriptionType      BillingCycle?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  activities            Activity[]
+  subscriptionPlansUsed ApiKey[]
+  auditLogs             AuditLog[]
+  categories            Category[]
+  clients               Client[]
+  companySubscriptions  CompanySubscription[]
+  contacts              Contact[]
+  conversations         Conversation[]
+  customFieldDefs       CustomFieldDefinition[]
+  documentationPages    DocumentationPage[]
+  emailCampaigns        EmailCampaign[]
+  financialStatements   FinancialStatement[]
+  invoices              Invoice[]
+  jobPostings           JobPosting[]
+  leads                 Lead[]
+  mailingLists          MailingList[]
+  opportunities         Opportunity[]
+  pipelines             Pipeline[]
+  prestataires          Prestataire[]
+  products              Product[]
+  projects              Project[]
+  purchaseOrders        PurchaseOrder[]
+  saleOrders            SaleOrder[]
+  tags                  Tag[]
+  templates             Template[]
+  users                 User[]
+  warehouses            Warehouse[]
+  comptesExploitation   CompteExploitation[]
+  chartOfAccounts       ChartOfAccounts[]
+  fiscalYears           FiscalYear[]
+  journals              Journal[]
+  journalEntries        JournalEntry[]
+  taxReturns            TaxReturn[]
+  balanceSheets         BalanceSheet[]
+  unitOfMeasures        UnitOfMeasure[]
+  productCategories     ProductCategory[]
+  batches               Batch[]
+  billOfMaterials       BillOfMaterials[]
+  inventories           Inventory[]
+  stockTransfers        StockTransfer[]
+  qualityControls       QualityControl[]
+  productionOrders      ProductionOrder[]
+  supportTickets        SupportTicket[]
+  analyticsDashboards   AnalyticsDashboard[]
+  analyticsReports      AnalyticsReport[]
+  documentCategories    DocumentCategory[]
+  documents             Document[]
+  ecommerceStores        EcommerceStore[]
+  resourceGroups        ResourceGroup[]
+  resources             Resource[]
+  assetCategories       AssetCategory[]
+  assets                Asset[]
+  marketingCampaigns    MarketingCampaign[]
+  emailTemplates        EmailTemplate[]
+  marketingAudiences    MarketingAudience[]
+}
+
+model SubscriptionPlan {
+  id                   String                @id @default(cuid())
+  name                 String
+  description          String?
+  price                Decimal               @default(0.0)
+  billingCycle         BillingCycle          @default(MONTHLY)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  companySubscriptions CompanySubscription[]
+}
+
+model CompanySubscription {
+  id                 String           @id @default(cuid())
+  startDate          DateTime         @default(now())
+  endDate            DateTime?
+  active             Boolean          @default(true)
+  companyId          String
+  subscriptionPlanId String
+  company            Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  subscriptionPlan   SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id])
+
+  @@unique([companyId, subscriptionPlanId])
+}
+
+model User {
+  id                         String                    @id @default(cuid())
+  email                      String                    @unique
+  password                   String
+  name                       String?
+  role                       Role                      @default(USER)
+  createdAt                  DateTime                  @default(now())
+  updatedAt                  DateTime                  @updatedAt
+  avatar                     String?
+  companyId                  String?
+  employeeNumber             String?
+  countryCode                String?                   @default("+225")
+  phoneNumber                String?
+  absences                   Absence[]
+  activities                 Activity[]
+  requestsToApprove          ApprovalRequest[]         @relation("Approvers")
+  requestsMade               ApprovalRequest[]         @relation("Requesters")
+  auditLogs                  AuditLog[]
+  conversationsParticipating ConversationParticipant[]
+  interviews                 Interview[]               @relation("UserInterviewer")
+  messagesSent               Message[]                 @relation("MessageSender")
+  payrolls                   Payroll[]
+  projects                   Project[]                 @relation("UserProjects")
+  tasks                      Task[]                    @relation("UserTasks")
+  uploads                    Upload[]
+  company                    Company?                  @relation(fields: [companyId], references: [id])
+  comptesExploitation        CompteExploitation[]
+  journalEntries            JournalEntry[]
+  balanceSheets             BalanceSheet[]
+  inventories               Inventory[]
+  stockTransfers            StockTransfer[]
+  qualityControls           QualityControl[]
+  productionOrders          ProductionOrder[]
+  createdTickets           SupportTicket[]       @relation("CreatedTickets")
+  assignedTickets          SupportTicket[]       @relation("AssignedTickets")
+  ticketComments           TicketComment[]
+  ticketAttachments        TicketAttachment[]
+  analyticsDashboards      AnalyticsDashboard[]
+  userDashboards           UserDashboard[]
+  analyticsReports         AnalyticsReport[]
+  reportExecutions         ReportExecution[]
+  createdDocuments         Document[]            @relation("DocumentCreator")
+  modifiedDocuments        Document[]            @relation("DocumentModifier")
+  documentComments         DocumentComment[]
+  documentVersions         DocumentVersion[]
+  sharedDocuments          UserDocument[]
+  resource                 Resource?
+  resourceUnavailability   ResourceUnavailability[]
+  resourceBookings         ResourceBooking[]
+  assignedAssets           Asset[]
+  assetMaintenances        AssetMaintenance[]
+  createdCampaigns         MarketingCampaign[]   @relation("CampaignCreator")
+  modifiedCampaigns        MarketingCampaign[]   @relation("CampaignModifier")
+  emailTemplates           EmailTemplate[]
+  createdAudiences         MarketingAudience[]
+  updatedAudiences         MarketingAudience[]   @relation("AudienceUpdater")
+}
+
+model Absence {
+  id        String   @id @default(cuid())
+  userId    String
+  startDate DateTime
+  endDate   DateTime
+  type      String
+  status    String   @default("PENDING")
+  reason    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Payroll {
+  id          String   @id @default(cuid())
+  userId      String
+  periodStart DateTime
+  periodEnd   DateTime
+  grossPay    Decimal  @default(0.0)
+  netPay      Decimal  @default(0.0)
+  taxes       Decimal  @default(0.0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model Client {
+  id             String          @id @default(cuid())
+  name           String
+  email          String?
+  phone          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  documents      String[]
+  logo           String?
+  companyId      String?
+  company        Company?        @relation(fields: [companyId], references: [id])
+  invoices       Invoice[]
+  convertedLeads Lead[]          @relation("ConvertedClient")
+  opportunities  Opportunity[]
+  payments       Payment[]
+  projects       Project[]
+  purchaseOrders PurchaseOrder[] @relation("SupplierOrders")
+  saleOrders     SaleOrder[]
+  sharedDocuments      ClientDocument[]
+  ecommerceCustomers   EcommerceCustomer[]
+  resourceBookings     ResourceBooking[]
+  sentEmails           SentEmail[]
+  audienceMemberships  AudienceMember[]
+}
+
+model Prestataire {
+  id                  String               @id @default(cuid())
+  name                String
+  email               String?
+  phone               String?
+  role                String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  avatar              String?
+  documents           String[]
+  portfolio           String[]
+  companyId           String?
+  payments            Payment[]
+  company             Company?             @relation(fields: [companyId], references: [id])
+  projectPrestataires ProjectPrestataire[]
+}
+
+model Project {
+  id                   String                @id @default(cuid())
+  name                 String
+  status               ProjectStatus         @default(PENDING_VALIDATION)
+  description          String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  clientId             String?
+  userId               String?
+  currency             String                @default("XOF")
+  endDate              DateTime?
+  isFixedPrice         Boolean               @default(true)
+  startDate            DateTime?
+  totalPrice           Decimal?
+  documents            String[]
+  images               String[]
+  exchangeRateDate     DateTime?
+  fcfaEquivalent       Decimal?
+  companyId            String?
+  contrats             Contrat[]
+  devis                Devis[]
+  payments             Payment[]
+  client               Client?               @relation(fields: [clientId], references: [id])
+  company              Company?              @relation(fields: [companyId], references: [id])
+  user                 User?                 @relation("UserProjects", fields: [userId], references: [id])
+  projectAgents        ProjectAgent[]
+  projectParts         ProjectPart[]
+  projectPrestataires  ProjectPrestataire[]
+  projectSubscriptions ProjectSubscription[]
+  projectTools         ProjectTool[]
+  tasks                Task[]
+  tags                 Tag[]                 @relation("ProjectTags")
+  resourceBookings     ResourceBooking[]
+}
+
+model ProjectPart {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  price          Decimal  @default(0.0)
+  completed      Boolean  @default(false)
+  projectId      String
+  fcfaEquivalent Decimal?
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks          Task[]
+}
+
+model ProjectPrestataire {
+  id            String      @id @default(cuid())
+  role          String?
+  hourlyRate    Decimal?
+  fixedAmount   Decimal?
+  projectId     String
+  prestataireId String
+  prestataire   Prestataire @relation(fields: [prestataireId], references: [id])
+  project       Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, prestataireId])
+}
+
+model Task {
+  id             String        @id @default(cuid())
+  title          String
+  description    String?
+  status         TaskStatus    @default(TODO)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  projectId      String?
+  assignedToId   String?
+  actualHours    Decimal?
+  dueDate        DateTime?
+  estimatedHours Decimal?
+  parentTaskId   String?
+  priority       TaskPriority  @default(MEDIUM)
+  projectPartId  String?
+  attachments    String[]
+  assignedTo     User?         @relation("UserTasks", fields: [assignedToId], references: [id])
+  parentTask     Task?         @relation("SubTasks", fields: [parentTaskId], references: [id])
+  subTasks       Task[]        @relation("SubTasks")
+  project        Project?      @relation(fields: [projectId], references: [id])
+  projectPart    ProjectPart?  @relation(fields: [projectPartId], references: [id])
+  comments       TaskComment[]
+}
+
+model TaskComment {
+  id          String   @id @default(cuid())
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  taskId      String
+  authorId    String?
+  attachments String[]
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  paymentType    PaymentType
+  amount         Decimal       @default(0.0)
+  date           DateTime      @default(now())
+  projectId      String?
+  clientId       String?
+  subscriptionId String?
+  prestataireId  String?
+  description    String?
+  isPartial      Boolean       @default(false)
+  partNumber     Int?
+  paymentMethod  PaymentMethod @default(BANK_TRANSFER)
+  reference      String?
+  status         PaymentStatus @default(PENDING)
+  totalParts     Int?
+  client         Client?       @relation(fields: [clientId], references: [id])
+  prestataire    Prestataire?  @relation(fields: [prestataireId], references: [id])
+  project        Project?      @relation(fields: [projectId], references: [id])
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
+}
+
+model Subscription {
+  id                   String                @id @default(cuid())
+  serviceName          String
+  cost                 Decimal               @default(0.0)
+  billingCycle         BillingCycle          @default(MONTHLY)
+  nextBillingDate      DateTime
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  payments             Payment[]
+  projectSubscriptions ProjectSubscription[]
+}
+
+model ProjectSubscription {
+  id             String       @id @default(cuid())
+  startDate      DateTime     @default(now())
+  endDate        DateTime?
+  projectId      String
+  subscriptionId String
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+
+  @@unique([projectId, subscriptionId])
+}
+
+model Agent {
+  id            String         @id @default(cuid())
+  name          String
+  description   String?
+  version       String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  projectAgents ProjectAgent[]
+}
+
+model Tool {
+  id           String        @id @default(cuid())
+  name         String
+  description  String?
+  cost         Decimal       @default(0.0)
+  free         Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  projectTools ProjectTool[]
+}
+
+model ProjectAgent {
+  projectId String
+  agentId   String
+  agent     Agent   @relation(fields: [agentId], references: [id])
+  project   Project @relation(fields: [projectId], references: [id])
+
+  @@id([projectId, agentId])
+}
+
+model ProjectTool {
+  projectId String
+  toolId    String
+  project   Project @relation(fields: [projectId], references: [id])
+  tool      Tool    @relation(fields: [toolId], references: [id])
+
+  @@id([projectId, toolId])
+}
+
+model Devis {
+  id         String      @id @default(cuid())
+  reference  String
+  total      Decimal     @default(0.0)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  projectId  String?
+  status     String?     @default("DRAFT")
+  validUntil DateTime?
+  document   String?
+  project    Project?    @relation(fields: [projectId], references: [id])
+  items      DevisItem[]
+}
+
+model DevisItem {
+  id          String  @id @default(cuid())
+  description String
+  quantity    Int     @default(1)
+  unitPrice   Decimal @default(0.0)
+  total       Decimal @default(0.0)
+  devisId     String
+  devis       Devis   @relation(fields: [devisId], references: [id], onDelete: Cascade)
+}
+
+model Contrat {
+  id        String    @id @default(cuid())
+  title     String
+  content   String?
+  status    String    @default("DRAFT")
+  signedAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  projectId String?
+  document  String?
+  project   Project?  @relation(fields: [projectId], references: [id])
+}
+
+model Upload {
+  id         String   @id @default(cuid())
+  fileName   String
+  fileSize   Int
+  fileType   String
+  filePath   String
+  publicUrl  String
+  uploadType String
+  relatedId  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([uploadType, relatedId])
+}
+
+model ExchangeRate {
+  id             String   @id @default(cuid())
+  sourceCurrency String
+  targetCurrency String
+  rate           Decimal
+  date           DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([sourceCurrency, targetCurrency, date])
+  @@index([date])
+}
+
+model FinancialStatement {
+  id          String   @id @default(cuid())
+  companyId   String
+  periodStart DateTime
+  periodEnd   DateTime
+  revenue     Decimal  @default(0.0)
+  expenses    Decimal  @default(0.0)
+  profit      Decimal  @default(0.0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  company     Company  @relation(fields: [companyId], references: [id])
+}
+
+model MailingList {
+  id        String    @id @default(cuid())
+  companyId String
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  contacts  Contact[]
+  company   Company   @relation(fields: [companyId], references: [id])
+}
+
+model Contact {
+  id                 String              @id @default(cuid())
+  email              String
+  name               String?
+  phone              String?
+  companyId          String?
+  mailingListId      String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  campaignRecipients CampaignRecipient[]
+  company            Company?            @relation(fields: [companyId], references: [id])
+  mailingList        MailingList?        @relation(fields: [mailingListId], references: [id])
+}
+
+model EmailCampaign {
+  id          String              @id @default(cuid())
+  companyId   String
+  name        String
+  subject     String
+  body        String
+  status      String              @default("DRAFT")
+  scheduledAt DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  recipients  CampaignRecipient[]
+  company     Company             @relation(fields: [companyId], references: [id])
+}
+
+model CampaignRecipient {
+  id              String        @id @default(cuid())
+  emailCampaignId String
+  contactId       String?
+  status          String        @default("PENDING")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  contact         Contact?      @relation(fields: [contactId], references: [id])
+  emailCampaign   EmailCampaign @relation(fields: [emailCampaignId], references: [id], onDelete: Cascade)
+}
+
+model Template {
+  id           String   @id @default(cuid())
+  companyId    String
+  name         String
+  content      String
+  templateType String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  company      Company  @relation(fields: [companyId], references: [id])
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  companyId     String
+  clientId      String?
+  invoiceNumber String
+  issueDate     DateTime      @default(now())
+  dueDate       DateTime?
+  total         Decimal       @default(0.0)
+  status        String        @default("DRAFT")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  client        Client?       @relation(fields: [clientId], references: [id])
+  company       Company       @relation(fields: [companyId], references: [id])
+  items         InvoiceItem[]
+  ecommerceOrders EcommerceOrder[]
+}
+
+model InvoiceItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  description String
+  quantity    Int     @default(1)
+  unitPrice   Decimal @default(0.0)
+  total       Decimal @default(0.0)
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+model Category {
+  id            String     @id @default(cuid())
+  companyId     String
+  name          String
+  parentId      String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  company       Company    @relation(fields: [companyId], references: [id])
+  parent        Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  subcategories Category[] @relation("CategoryHierarchy")
+  products      Product[]
+}
+
+model Product {
+  id                 String              @id @default(cuid())
+  companyId          String
+  name               String
+  description        String?
+  price              Decimal             @default(0.0)
+  sku                String?
+  categoryId         String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  category           Category?           @relation(fields: [categoryId], references: [id])
+  company            Company             @relation(fields: [companyId], references: [id])
+  purchaseOrderLines PurchaseOrderLine[]
+  saleOrderLines     SaleOrderLine[]
+  stockMovements     StockMovement[]
+  unitOfMeasureId    String?
+  unitOfMeasure      UnitOfMeasure?      @relation(fields: [unitOfMeasureId], references: [id])
+  productCategoryId  String?
+  productCategory    ProductCategory?    @relation(fields: [productCategoryId], references: [id])
+  bomProducts         BillOfMaterials[]
+  bomComponents       BomItem[]
+  batches             Batch[]
+  stockItems          StockItem[]
+  transferItems       TransferItem[]
+  ecommerceProducts    EcommerceProduct[]
+}
+
+model Warehouse {
+  id             String          @id @default(cuid())
+  companyId      String
+  name           String
+  location       String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  stockMovements StockMovement[]
+  company        Company         @relation(fields: [companyId], references: [id])
+  locations      WarehouseLocation[]
+  stockItems     StockItem[]
+  inventories    Inventory[]
+  sourceTransfers StockTransfer[]     @relation("SourceWarehouse")
+  destinationTransfers StockTransfer[]    @relation("DestinationWarehouse")
+}
+
+model StockMovement {
+  id           String    @id @default(cuid())
+  productId    String
+  warehouseId  String
+  quantity     Int
+  movementType String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  product      Product   @relation(fields: [productId], references: [id])
+  warehouse    Warehouse @relation(fields: [warehouseId], references: [id])
+}
+
+model PurchaseOrder {
+  id         String              @id @default(cuid())
+  companyId  String
+  supplierId String?
+  orderDate  DateTime            @default(now())
+  status     String              @default("DRAFT")
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  company    Company             @relation(fields: [companyId], references: [id])
+  supplier   Client?             @relation("SupplierOrders", fields: [supplierId], references: [id])
+  lines      PurchaseOrderLine[]
+}
+
+model PurchaseOrderLine {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  productId       String
+  quantity        Int           @default(1)
+  unitPrice       Decimal       @default(0.0)
+  total           Decimal       @default(0.0)
+  product         Product       @relation(fields: [productId], references: [id])
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+}
+
+model SaleOrder {
+  id        String          @id @default(cuid())
+  companyId String
+  clientId  String?
+  orderDate DateTime        @default(now())
+  status    String          @default("DRAFT")
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  client    Client?         @relation(fields: [clientId], references: [id])
+  company   Company         @relation(fields: [companyId], references: [id])
+  lines     SaleOrderLine[]
+}
+
+model SaleOrderLine {
+  id          String    @id @default(cuid())
+  saleOrderId String
+  productId   String
+  quantity    Int       @default(1)
+  unitPrice   Decimal   @default(0.0)
+  total       Decimal   @default(0.0)
+  product     Product   @relation(fields: [productId], references: [id])
+  saleOrder   SaleOrder @relation(fields: [saleOrderId], references: [id], onDelete: Cascade)
+}
+
+model Tag {
+  id        String    @id @default(cuid())
+  companyId String
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  company   Company   @relation(fields: [companyId], references: [id])
+  projects  Project[] @relation("ProjectTags")
+}
+
+model Conversation {
+  id           String                    @id @default(cuid())
+  companyId    String
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  company      Company                   @relation(fields: [companyId], references: [id])
+  participants ConversationParticipant[]
+  messages     Message[]
+}
+
+model ConversationParticipant {
+  id             String       @id @default(cuid())
+  conversationId String
+  userId         String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id])
+
+  @@unique([conversationId, userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation("MessageSender", fields: [senderId], references: [id])
+}
+
+model ApprovalRequest {
+  id          String   @id @default(cuid())
+  requestType String
+  requesterId String
+  approverId  String
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  approver    User     @relation("Approvers", fields: [approverId], references: [id])
+  requester   User     @relation("Requesters", fields: [requesterId], references: [id])
+}
+
+model Tax {
+  id        String   @id @default(cuid())
+  name      String
+  rate      Decimal  @default(0.0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Currency {
+  code      String   @id
+  name      String
+  symbol    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Lead {
+  id                  String        @id @default(cuid())
+  companyId           String
+  name                String
+  email               String?
+  phone               String?
+  source              String?
+  status              String        @default("NEW")
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  convertedToClientId String?
+  company             Company       @relation(fields: [companyId], references: [id])
+  convertedToClient   Client?       @relation("ConvertedClient", fields: [convertedToClientId], references: [id])
+  opportunities       Opportunity[]
+  sentEmails          SentEmail[]
+  audienceMemberships AudienceMember[]
+}
+
+model Pipeline {
+  id            String        @id @default(cuid())
+  companyId     String
+  name          String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  opportunities Opportunity[]
+  company       Company       @relation(fields: [companyId], references: [id])
+}
+
+model Opportunity {
+  id         String    @id @default(cuid())
+  companyId  String
+  leadId     String?
+  clientId   String?
+  pipelineId String?
+  name       String
+  stage      String    @default("QUALIFICATION")
+  amount     Decimal   @default(0.0)
+  currency   String    @default("EUR")
+  closeDate  DateTime?
+  status     String    @default("OPEN")
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  client     Client?   @relation(fields: [clientId], references: [id])
+  company    Company   @relation(fields: [companyId], references: [id])
+  lead       Lead?     @relation(fields: [leadId], references: [id])
+  pipeline   Pipeline? @relation(fields: [pipelineId], references: [id])
+}
+
+model Activity {
+  id          String    @id @default(cuid())
+  companyId   String
+  userId      String?
+  relatedTo   String?
+  relatedId   String?
+  type        String
+  subject     String?
+  description String?
+  scheduledAt DateTime?
+  completedAt DateTime?
+  status      String    @default("PLANNED")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  company     Company   @relation(fields: [companyId], references: [id])
+  user        User?     @relation(fields: [userId], references: [id])
+}
+
+model JobPosting {
+  id           String        @id @default(cuid())
+  companyId    String
+  title        String
+  description  String?
+  location     String?
+  department   String?
+  status       String        @default("OPEN")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  applications Application[]
+  company      Company       @relation(fields: [companyId], references: [id])
+}
+
+model Candidate {
+  id           String        @id @default(cuid())
+  firstName    String
+  lastName     String
+  email        String
+  phone        String?
+  resumeUrl    String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  applications Application[]
+}
+
+model Application {
+  id           String      @id @default(cuid())
+  jobPostingId String
+  candidateId  String
+  status       String      @default("RECEIVED")
+  appliedAt    DateTime    @default(now())
+  notes        String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  candidate    Candidate   @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  jobPosting   JobPosting  @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
+  interviews   Interview[]
+}
+
+model Interview {
+  id            String      @id @default(cuid())
+  applicationId String
+  scheduledAt   DateTime
+  interviewerId String?
+  feedback      String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  interviewer   User?       @relation("UserInterviewer", fields: [interviewerId], references: [id])
+}
+
+model CustomFieldDefinition {
+  id           String             @id @default(cuid())
+  companyId    String
+  entityName   String
+  fieldName    String
+  fieldType    String
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @default(now())
+  company      Company            @relation(fields: [companyId], references: [id])
+  customValues CustomFieldValue[]
+}
+
+model CustomFieldValue {
+  id               String                @id @default(cuid())
+  customFieldDefId String
+  recordId         String
+  value            String?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @default(now())
+  customFieldDef   CustomFieldDefinition @relation(fields: [customFieldDefId], references: [id], onDelete: Cascade)
+}
+
+model ApiKey {
+  id            String         @id @default(cuid())
+  key           String         @unique
+  secret        String
+  name          String
+  description   String?
+  scopes        String[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  revokedAt     DateTime?
+  expiresAt     DateTime?
+  companyId     String
+  apiAccessLogs ApiAccessLog[]
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+}
+
+model ApiAccessLog {
+  id        String   @id @default(cuid())
+  apiKeyId  String
+  endpoint  String
+  method    String
+  ip        String?
+  createdAt DateTime @default(now())
+  apiKey    ApiKey   @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+}
+
+model DocumentationPage {
+  id        String   @id @default(cuid())
+  title     String
+  slug      String   @unique
+  content   String
+  category  String?
+  isPublic  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  companyId  String?
+  userId     String?
+  action     String
+  resource   String
+  resourceId String?
+  details    String?
+  createdAt  DateTime @default(now())
+  company    Company? @relation(fields: [companyId], references: [id])
+  user       User?    @relation(fields: [userId], references: [id])
+}
+
+model CompteExploitation {
+  id            String   @id @default(cuid())
+  title         String
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id])
+  anneeN        Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdById   String
+  createdBy     User     @relation(fields: [createdById], references: [id])
+  data          Json
+}
+
+model ChartOfAccounts {
+  id                String             @id @default(cuid())
+  companyId         String
+  company           Company            @relation(fields: [companyId], references: [id])
+  code              String
+  name              String
+  type              String             // ACTIF, PASSIF, CHARGE, PRODUIT, etc.
+  category          String?            // Catégorie comptable
+  parentId          String?
+  parent            ChartOfAccounts?   @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children          ChartOfAccounts[]  @relation("AccountHierarchy")
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  journalEntryItems JournalEntryItem[]
+
+  @@unique([companyId, code])
+}
+
+model FiscalYear {
+  id          String         @id @default(cuid())
+  companyId   String
+  company     Company        @relation(fields: [companyId], references: [id])
+  name        String
+  startDate   DateTime
+  endDate     DateTime
+  isClosed    Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  journals    Journal[]
+  taxReturns  TaxReturn[]
+}
+
+model Journal {
+  id           String         @id @default(cuid())
+  companyId    String
+  company      Company        @relation(fields: [companyId], references: [id])
+  fiscalYearId String
+  fiscalYear   FiscalYear     @relation(fields: [fiscalYearId], references: [id])
+  code         String
+  name         String
+  type         String         // ACHAT, VENTE, BANQUE, CAISSE, OD, etc.
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  entries      JournalEntry[]
+
+  @@unique([companyId, code])
+}
+
+model JournalEntry {
+  id              String             @id @default(cuid())
+  companyId       String
+  company         Company            @relation(fields: [companyId], references: [id])
+  journalId       String
+  journal         Journal            @relation(fields: [journalId], references: [id])
+  date            DateTime
+  reference       String
+  description     String?
+  status          String             @default("DRAFT") // DRAFT, POSTED, CANCELLED
+  totalDebit      Decimal            @default(0.0)
+  totalCredit     Decimal            @default(0.0)
+  createdById     String
+  createdBy       User               @relation(fields: [createdById], references: [id])
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  invoiceId       String?            // Lien optionnel vers une facture
+  transactionId   String?            // Identifiant de transaction externe
+  items           JournalEntryItem[]
+  attachments     String[]
+}
+
+model JournalEntryItem {
+  id             String          @id @default(cuid())
+  journalEntryId String
+  journalEntry   JournalEntry    @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  accountId      String
+  account        ChartOfAccounts @relation(fields: [accountId], references: [id])
+  description    String?
+  debit          Decimal         @default(0.0)
+  credit         Decimal         @default(0.0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model TaxReturn {
+  id            String     @id @default(cuid())
+  companyId     String
+  company       Company    @relation(fields: [companyId], references: [id])
+  fiscalYearId  String
+  fiscalYear    FiscalYear @relation(fields: [fiscalYearId], references: [id])
+  type          String     // TVA, IS, etc.
+  period        String     // Trimestre1, Année, etc.
+  dueDate       DateTime
+  submissionDate DateTime?
+  status        String     @default("PENDING") // PENDING, SUBMITTED, PAID
+  taxAmount     Decimal    @default(0.0)
+  document      String?    // URL du document
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model BalanceSheet {
+  id            String   @id @default(cuid())
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id])
+  asOfDate      DateTime
+  totalAssets   Decimal  @default(0.0)
+  totalLiabilities Decimal @default(0.0)
+  totalEquity   Decimal  @default(0.0)
+  isPublished   Boolean  @default(false)
+  createdById   String
+  createdBy     User     @relation(fields: [createdById], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  data          Json     // Détails du bilan
+}
+
+model WarehouseLocation {
+  id             String           @id @default(cuid())
+  warehouseId    String
+  warehouse      Warehouse        @relation(fields: [warehouseId], references: [id])
+  name           String
+  code           String
+  type           String           @default("STANDARD") // STANDARD, RECEPTION, EXPEDITION, QUARANTINE, etc.
+  capacity       Decimal?
+  capacityUnit   String?
+  isActive       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  stockItems     StockItem[]
+  inventories    Inventory[]
+  transferItems  TransferItem[]   @relation("SourceLocation")
+  transferItemsTo TransferItem[]  @relation("DestinationLocation")
+
+  @@unique([warehouseId, code])
+}
+
+model UnitOfMeasure {
+  id          String        @id @default(cuid())
+  companyId   String
+  company     Company       @relation(fields: [companyId], references: [id])
+  name        String
+  abbreviation String
+  type        String        // WEIGHT, VOLUME, LENGTH, UNIT, etc.
+  baseUnit    Boolean       @default(false)
+  conversionFactor Decimal? @default(1.0)
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  products    Product[]
+  stockItems  StockItem[]
+
+  @@unique([companyId, abbreviation])
+}
+
+model ProductCategory {
+  id            String            @id @default(cuid())
+  companyId     String
+  company       Company           @relation(fields: [companyId], references: [id])
+  name          String
+  code          String
+  parentId      String?
+  parent        ProductCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  subcategories ProductCategory[] @relation("CategoryHierarchy")
+  products      Product[]
+  isActive      Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@unique([companyId, code])
+}
+
+model Batch {
+  id               String          @id @default(cuid())
+  companyId        String
+  company          Company         @relation(fields: [companyId], references: [id])
+  batchNumber      String
+  productId        String
+  product          Product         @relation(fields: [productId], references: [id])
+  manufacturingDate DateTime?
+  expiryDate       DateTime?
+  status           String          @default("AVAILABLE") // AVAILABLE, QUARANTINE, EXPIRED, CONSUMED
+  notes            String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  stockItems       StockItem[]
+  qualityControls  QualityControl[]
+
+  @@unique([companyId, batchNumber])
+}
+
+model StockItem {
+  id                String            @id @default(cuid())
+  productId         String
+  product           Product           @relation(fields: [productId], references: [id])
+  warehouseId       String
+  warehouse         Warehouse         @relation(fields: [warehouseId], references: [id])
+  locationId        String?
+  location          WarehouseLocation? @relation(fields: [locationId], references: [id])
+  quantity          Decimal           @default(0.0)
+  reservedQuantity  Decimal           @default(0.0)
+  availableQuantity Decimal           @default(0.0)
+  unitId            String?
+  unit              UnitOfMeasure?    @relation(fields: [unitId], references: [id])
+  batchId           String?
+  batch             Batch?            @relation(fields: [batchId], references: [id])
+  serialNumber      String?
+  status            String            @default("AVAILABLE") // AVAILABLE, RESERVED, DAMAGED
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  inventoryItems    InventoryItem[]
+  
+  @@unique([productId, warehouseId, locationId, batchId, serialNumber])
+}
+
+model BillOfMaterials {
+  id              String              @id @default(cuid())
+  companyId       String
+  company         Company             @relation(fields: [companyId], references: [id])
+  productId       String
+  product         Product             @relation(fields: [productId], references: [id])
+  name            String
+  version         String
+  isDefault       Boolean             @default(false)
+  isActive        Boolean             @default(true)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  items           BomItem[]
+  productionOrders ProductionOrder[]
+
+  @@unique([productId, version])
+}
+
+model BomItem {
+  id                String          @id @default(cuid())
+  billOfMaterialsId String
+  billOfMaterials   BillOfMaterials @relation(fields: [billOfMaterialsId], references: [id], onDelete: Cascade)
+  componentId       String
+  component         Product         @relation(fields: [componentId], references: [id])
+  quantity          Decimal         @default(1.0)
+  wastagePercentage Decimal         @default(0.0)
+  notes             String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model Inventory {
+  id             String          @id @default(cuid())
+  companyId      String
+  company        Company         @relation(fields: [companyId], references: [id])
+  warehouseId    String
+  warehouse      Warehouse       @relation(fields: [warehouseId], references: [id])
+  locationId     String?
+  location       WarehouseLocation? @relation(fields: [locationId], references: [id])
+  reference      String
+  date           DateTime
+  status         String          @default("DRAFT") // DRAFT, IN_PROGRESS, COMPLETED, CANCELLED
+  notes          String?
+  createdById    String
+  createdBy      User            @relation(fields: [createdById], references: [id])
+  completedAt    DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  items          InventoryItem[]
+}
+
+model InventoryItem {
+  id               String      @id @default(cuid())
+  inventoryId      String
+  inventory        Inventory   @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  stockItemId      String
+  stockItem        StockItem   @relation(fields: [stockItemId], references: [id])
+  expectedQuantity Decimal     @default(0.0)
+  actualQuantity   Decimal?
+  discrepancy      Decimal?
+  notes            String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+}
+
+model StockTransfer {
+  id                 String          @id @default(cuid())
+  companyId          String
+  company            Company         @relation(fields: [companyId], references: [id])
+  reference          String
+  date               DateTime
+  sourceWarehouseId  String
+  sourceWarehouse    Warehouse       @relation("SourceWarehouse", fields: [sourceWarehouseId], references: [id])
+  destinationWarehouseId String
+  destinationWarehouse Warehouse     @relation("DestinationWarehouse", fields: [destinationWarehouseId], references: [id])
+  status             String          @default("DRAFT") // DRAFT, PENDING, COMPLETED, CANCELLED
+  notes              String?
+  createdById        String
+  createdBy          User            @relation(fields: [createdById], references: [id])
+  completedAt        DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  items              TransferItem[]
+}
+
+model TransferItem {
+  id                     String             @id @default(cuid())
+  stockTransferId        String
+  stockTransfer          StockTransfer      @relation(fields: [stockTransferId], references: [id], onDelete: Cascade)
+  productId              String
+  product                Product            @relation(fields: [productId], references: [id])
+  quantity               Decimal            @default(0.0)
+  sourceLocationId       String?
+  sourceLocation         WarehouseLocation? @relation("SourceLocation", fields: [sourceLocationId], references: [id])
+  destinationLocationId  String?
+  destinationLocation    WarehouseLocation? @relation("DestinationLocation", fields: [destinationLocationId], references: [id])
+  batchId                String?
+  batch                  Batch?             @relation(fields: [batchId], references: [id])
+  serialNumber           String?
+  status                 String             @default("PENDING") // PENDING, TRANSFERRED
+  notes                  String?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+}
+
+model QualityControl {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  batchId     String
+  batch       Batch    @relation(fields: [batchId], references: [id])
+  reference   String
+  date        DateTime
+  inspectorId String
+  inspector   User     @relation(fields: [inspectorId], references: [id])
+  result      String   // PASS, FAIL, CONDITIONAL
+  notes       String?
+  parameters  Json?    // Paramètres de contrôle qualité
+  documents   String[] // URLs des documents liés
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ProductionOrder {
+  id                String          @id @default(cuid())
+  companyId         String
+  company           Company         @relation(fields: [companyId], references: [id])
+  reference         String
+  billOfMaterialsId String
+  billOfMaterials   BillOfMaterials @relation(fields: [billOfMaterialsId], references: [id])
+  plannedQuantity   Decimal         @default(0.0)
+  producedQuantity  Decimal         @default(0.0)
+  startDate         DateTime?
+  endDate           DateTime?
+  status            String          @default("DRAFT") // DRAFT, PLANNED, IN_PROGRESS, COMPLETED, CANCELLED
+  notes             String?
+  createdById       String
+  createdBy         User            @relation(fields: [createdById], references: [id])
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model SupportTicket {
+  id                String            @id @default(cuid())
+  companyId         String
+  company           Company           @relation(fields: [companyId], references: [id])
+  subject           String
+  description       String
+  priority          String            @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  status            String            @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED, CLOSED
+  category          String            // BILLING, TECHNICAL, FEATURE_REQUEST, BUG, ACCESS, OTHER
+  assignedToId      String?
+  assignedTo        User?             @relation("AssignedTickets", fields: [assignedToId], references: [id])
+  createdById       String
+  createdBy         User              @relation("CreatedTickets", fields: [createdById], references: [id])
+  resolvedAt        DateTime?
+  closedAt          DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  comments          TicketComment[]
+  attachments       TicketAttachment[]
+}
+
+model TicketComment {
+  id              String        @id @default(cuid())
+  ticketId        String
+  ticket          SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  content         String
+  authorId        String
+  author          User          @relation(fields: [authorId], references: [id])
+  isInternal      Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  attachments     TicketAttachment[]
+}
+
+model TicketAttachment {
+  id              String         @id @default(cuid())
+  ticketId        String?
+  ticket          SupportTicket? @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  commentId       String?
+  comment         TicketComment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  filename        String
+  fileType        String
+  fileSize        Int
+  fileUrl         String
+  createdById     String
+  createdBy       User           @relation(fields: [createdById], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model AnalyticsDashboard {
+  id               String            @id @default(cuid())
+  companyId        String
+  company          Company           @relation(fields: [companyId], references: [id])
+  name             String
+  description      String?
+  isDefault        Boolean           @default(false)
+  isTemplate       Boolean           @default(false)
+  layouts          Json              // Configuration du layout
+  createdById      String
+  createdBy        User              @relation(fields: [createdById], references: [id])
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  widgets          AnalyticsWidget[]
+  sharedUsers      UserDashboard[]
+}
+
+model AnalyticsWidget {
+  id               String             @id @default(cuid())
+  dashboardId      String
+  dashboard        AnalyticsDashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  title            String
+  type             String             // CHART, KPI, TABLE, MAP, etc.
+  dataSource       String             // Nom de la source de données
+  dataQuery        Json               // Requête pour récupérer les données
+  displayOptions   Json               // Options d'affichage
+  position         Json               // Position dans le dashboard
+  size             Json               // Taille du widget
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+}
+
+model UserDashboard {
+  userId           String
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dashboardId      String
+  dashboard        AnalyticsDashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  canEdit          Boolean            @default(false)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@id([userId, dashboardId])
+}
+
+model AnalyticsReport {
+  id               String         @id @default(cuid())
+  companyId        String
+  company          Company        @relation(fields: [companyId], references: [id])
+  name             String
+  description      String?
+  dataQuery        Json           // Requête pour récupérer les données
+  displayOptions   Json           // Options d'affichage
+  scheduleEnabled  Boolean        @default(false)
+  scheduleConfig   Json?          // Configuration de la planification
+  createdById      String
+  createdBy        User           @relation(fields: [createdById], references: [id])
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  executions       ReportExecution[]
+}
+
+model ReportExecution {
+  id               String          @id @default(cuid())
+  reportId         String
+  report           AnalyticsReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  executedById     String
+  executedBy       User            @relation(fields: [executedById], references: [id])
+  status           String          @default("PENDING") // PENDING, RUNNING, COMPLETED, FAILED
+  resultData       Json?           // Données résultantes
+  resultUrl        String?         // URL vers le fichier généré
+  errorMessage     String?         // Message d'erreur si échec
+  startedAt        DateTime        @default(now())
+  completedAt      DateTime?
+}
+
+model DocumentCategory {
+  id               String           @id @default(cuid())
+  companyId        String
+  company          Company          @relation(fields: [companyId], references: [id])
+  name             String
+  description      String?
+  parentId         String?
+  parent           DocumentCategory? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  subcategories    DocumentCategory[] @relation("CategoryHierarchy")
+  documents        Document[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+model Document {
+  id               String           @id @default(cuid())
+  companyId        String
+  company          Company          @relation(fields: [companyId], references: [id])
+  categoryId       String?
+  category         DocumentCategory? @relation(fields: [categoryId], references: [id])
+  title            String
+  description      String?
+  fileUrl          String
+  fileType         String
+  fileSize         Int
+  version          String           @default("1.0")
+  status           String           @default("DRAFT") // DRAFT, PUBLISHED, ARCHIVED
+  tags             String[]
+  createdById      String
+  createdBy        User             @relation("DocumentCreator", fields: [createdById], references: [id])
+  lastModifiedById String
+  lastModifiedBy   User             @relation("DocumentModifier", fields: [lastModifiedById], references: [id])
+  sharedWithUsers  UserDocument[]
+  sharedWithClients ClientDocument[]
+  comments         DocumentComment[]
+  versions         DocumentVersion[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+model DocumentComment {
+  id               String           @id @default(cuid())
+  documentId       String
+  document         Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  content          String
+  authorId         String
+  author           User             @relation(fields: [authorId], references: [id])
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+model DocumentVersion {
+  id               String           @id @default(cuid())
+  documentId       String
+  document         Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version          String
+  fileUrl          String
+  fileType         String
+  fileSize         Int
+  createdById      String
+  createdBy        User             @relation(fields: [createdById], references: [id])
+  notes            String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+model UserDocument {
+  userId           String
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentId       String
+  document         Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  permissionLevel  String           @default("VIEW") // VIEW, COMMENT, EDIT, MANAGE
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@id([userId, documentId])
+}
+
+model ClientDocument {
+  clientId         String
+  client           Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  documentId       String
+  document         Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@id([clientId, documentId])
+}
+
+model EcommerceStore {
+  id               String           @id @default(cuid())
+  companyId        String
+  company          Company          @relation(fields: [companyId], references: [id])
+  name             String
+  url              String
+  platform         String           // SHOPIFY, WOOCOMMERCE, MAGENTO, PRESTASHOP, CUSTOM, etc.
+  status           String           @default("INACTIVE") // ACTIVE, INACTIVE, MAINTENANCE
+  apiKey           String?
+  apiSecret        String?
+  webhookSecret    String?
+  settings         Json?
+  lastSyncAt       DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  products         EcommerceProduct[]
+  orders           EcommerceOrder[]
+  customers        EcommerceCustomer[]
+}
+
+model EcommerceProduct {
+  id               String           @id @default(cuid())
+  storeId          String
+  store            EcommerceStore   @relation(fields: [storeId], references: [id])
+  externalId       String           // ID du produit dans la plateforme e-commerce
+  productId        String?
+  product          Product?         @relation(fields: [productId], references: [id])
+  name             String
+  description      String?
+  sku              String?
+  price            Decimal
+  compareAtPrice   Decimal?
+  costPrice        Decimal?
+  inventoryPolicy  String           @default("DENY") // DENY, CONTINUE
+  inventoryQuantity Int              @default(0)
+  isVisible        Boolean          @default(true)
+  isDeleted        Boolean          @default(false)
+  externalData     Json?
+  images           String[]         // URLs des images
+  tags             String[]
+  variants         EcommerceProductVariant[]
+  lastSyncAt       DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  orderItems       EcommerceOrderItem[]
+}
+
+model EcommerceProductVariant {
+  id               String           @id @default(cuid())
+  productId        String
+  product          EcommerceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  externalId       String           // ID de la variante dans la plateforme e-commerce
+  title            String
+  sku              String?
+  price            Decimal
+  compareAtPrice   Decimal?
+  costPrice        Decimal?
+  inventoryQuantity Int              @default(0)
+  isVisible        Boolean          @default(true)
+  externalData     Json?
+  options          Json             // Paires clé-valeur des options (couleur, taille, etc.)
+  image            String?          // URL de l'image
+  lastSyncAt       DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  orderItems       EcommerceOrderItem[]
+}
+
+model EcommerceCustomer {
+  id               String           @id @default(cuid())
+  storeId          String
+  store            EcommerceStore   @relation(fields: [storeId], references: [id])
+  externalId       String           // ID du client dans la plateforme e-commerce
+  clientId         String?
+  client           Client?          @relation(fields: [clientId], references: [id])
+  email            String
+  firstName        String?
+  lastName         String?
+  phone            String?
+  totalOrders      Int              @default(0)
+  totalSpent       Decimal          @default(0)
+  acceptsMarketing Boolean          @default(false)
+  externalData     Json?
+  lastSyncAt       DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  orders           EcommerceOrder[]
+}
+
+model EcommerceOrder {
+  id                 String             @id @default(cuid())
+  storeId            String
+  store              EcommerceStore     @relation(fields: [storeId], references: [id])
+  externalId         String             // ID de la commande dans la plateforme e-commerce
+  orderNumber        String
+  customerId         String?
+  customer           EcommerceCustomer? @relation(fields: [customerId], references: [id])
+  invoiceId          String?
+  invoice            Invoice?           @relation(fields: [invoiceId], references: [id])
+  financialStatus    String             @default("PENDING") // PENDING, PAID, REFUNDED, PARTIALLY_REFUNDED
+  fulfillmentStatus  String             @default("UNFULFILLED") // UNFULFILLED, PARTIALLY_FULFILLED, FULFILLED
+  totalPrice         Decimal
+  subtotalPrice      Decimal
+  totalTax           Decimal            @default(0)
+  totalDiscounts     Decimal            @default(0)
+  totalShipping      Decimal            @default(0)
+  currency           String             @default("EUR")
+  shippingAddress    Json?
+  billingAddress     Json?
+  note               String?
+  externalData       Json?
+  lastSyncAt         DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  items              EcommerceOrderItem[]
+}
+
+model EcommerceOrderItem {
+  id                String                 @id @default(cuid())
+  orderId           String
+  order             EcommerceOrder         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  externalId        String                 // ID de l'article dans la plateforme e-commerce
+  productId         String?
+  product           EcommerceProduct?      @relation(fields: [productId], references: [id])
+  variantId         String?
+  variant           EcommerceProductVariant? @relation(fields: [variantId], references: [id])
+  title             String
+  sku               String?
+  quantity          Int
+  price             Decimal
+  totalPrice        Decimal
+  discount          Decimal                @default(0)
+  taxable           Boolean                @default(true)
+  tax               Decimal                @default(0)
+  properties        Json?                  // Propriétés personnalisées
+  externalData      Json?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+}
+
+model ResourceGroup {
+  id               String             @id @default(cuid())
+  companyId        String
+  company          Company            @relation(fields: [companyId], references: [id])
+  name             String
+  description      String?
+  color            String?            // Code couleur pour les interfaces
+  isActive         Boolean            @default(true)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  resources        Resource[]
+}
+
+model Resource {
+  id               String             @id @default(cuid())
+  companyId        String
+  company          Company            @relation(fields: [companyId], references: [id])
+  groupId          String?
+  group            ResourceGroup?     @relation(fields: [groupId], references: [id])
+  name             String
+  type             String             // EMPLOYEE, EQUIPMENT, VEHICLE, ROOM, etc.
+  description      String?
+  isHuman          Boolean            @default(false)
+  userId           String?
+  user             User?              @relation(fields: [userId], references: [id])
+  hourlyRate       Decimal?
+  availability     Json?              // Configuration de disponibilité récurrente
+  capacity         Int?               // Capacité maximale (pour les ressources non-humaines)
+  color            String?            // Code couleur pour les interfaces
+  isActive         Boolean            @default(true)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  unavailability   ResourceUnavailability[]
+  bookings         ResourceBooking[]
+}
+
+model ResourceUnavailability {
+  id               String             @id @default(cuid())
+  resourceId       String
+  resource         Resource           @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  startDate        DateTime
+  endDate          DateTime
+  reason           String?
+  note             String?
+  isRecurring      Boolean            @default(false)
+  recurringPattern Json?              // Configuration de récurrence si applicable
+  createdById      String
+  createdBy        User               @relation(fields: [createdById], references: [id])
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+}
+
+model ResourceBooking {
+  id               String             @id @default(cuid())
+  resourceId       String
+  resource         Resource           @relation(fields: [resourceId], references: [id])
+  projectId        String?
+  project          Project?           @relation(fields: [projectId], references: [id])
+  clientId         String?
+  client           Client?            @relation(fields: [clientId], references: [id])
+  title            String
+  description      String?
+  startDate        DateTime
+  endDate          DateTime
+  status           String             @default("CONFIRMED") // TENTATIVE, CONFIRMED, CANCELLED
+  allDay           Boolean            @default(false)
+  isRecurring      Boolean            @default(false)
+  recurringPattern Json?              // Configuration de récurrence si applicable
+  locationName     String?
+  locationAddress  String?
+  locationCoordinates Json?           // Lat/Long ou autres données de localisation
+  createdById      String
+  createdBy        User               @relation(fields: [createdById], references: [id])
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+}
+
+model AssetCategory {
+  id               String           @id @default(cuid())
+  companyId        String
+  company          Company          @relation(fields: [companyId], references: [id])
+  name             String
+  description      String?
+  parentId         String?
+  parent           AssetCategory?   @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  subcategories    AssetCategory[]  @relation("CategoryHierarchy")
+  assets           Asset[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+model Asset {
+  id               String           @id @default(cuid())
+  companyId        String
+  company          Company          @relation(fields: [companyId], references: [id])
+  categoryId       String?
+  category         AssetCategory?   @relation(fields: [categoryId], references: [id])
+  name             String
+  description      String?
+  assetNumber      String           // Numéro d'identification unique
+  serialNumber     String?
+  model            String?
+  manufacturer     String?
+  status           String           @default("ACTIVE") // ACTIVE, INACTIVE, MAINTENANCE, RETIRED
+  purchaseDate     DateTime?
+  purchasePrice    Decimal?
+  currentValue     Decimal?
+  location         String?
+  assignedToId     String?
+  assignedTo       User?            @relation(fields: [assignedToId], references: [id])
+  warrantyExpiryDate DateTime?
+  maintenanceSchedule Json?
+  documents        String[]         // URLs des documents liés
+  images           String[]         // URLs des images
+  notes            String?
+  customFields     Json?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  maintenances     AssetMaintenance[]
+}
+
+model AssetMaintenance {
+  id               String           @id @default(cuid())
+  assetId          String
+  asset            Asset            @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  type             String           // PREVENTIVE, CORRECTIVE, PREDICTIVE
+  title            String
+  description      String?
+  status           String           @default("PLANNED") // PLANNED, IN_PROGRESS, COMPLETED, CANCELLED
+  cost             Decimal?
+  scheduledDate    DateTime?
+  completedDate    DateTime?
+  performedById    String?
+  performedBy      User?            @relation(fields: [performedById], references: [id])
+  documents        String[]         // URLs des documents liés
+  notes            String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+model MarketingCampaign {
+  id               String           @id @default(cuid())
+  companyId        String
+  company          Company          @relation(fields: [companyId], references: [id])
+  name             String
+  description      String?
+  type             String           // EMAIL, SMS, SOCIAL_MEDIA, DISPLAY, SEARCH, OFFLINE, etc.
+  status           String           @default("DRAFT") // DRAFT, SCHEDULED, ACTIVE, PAUSED, COMPLETED, CANCELLED
+  startDate        DateTime?
+  endDate          DateTime?
+  budget           Decimal?
+  currency         String           @default("EUR")
+  goals            String[]
+  targetAudience   Json?
+  tags             String[]
+  channels         String[]
+  metrics          Json?
+  results          Json?
+  createdById      String
+  createdBy        User             @relation("CampaignCreator", fields: [createdById], references: [id])
+  lastModifiedById String
+  lastModifiedBy   User             @relation("CampaignModifier", fields: [lastModifiedById], references: [id])
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  emailTemplates   EmailTemplate[]
+  audiences        CampaignAudience[]
+}
+
+model EmailTemplate {
+  id               String           @id @default(cuid())
+  companyId        String
+  company          Company          @relation(fields: [companyId], references: [id])
+  campaignId       String?
+  campaign         MarketingCampaign? @relation(fields: [campaignId], references: [id])
+  name             String
+  subject          String
+  sender           String?
+  content          String           // Contenu HTML
+  plainText        String?          // Version texte brut
+  previewText      String?
+  isTemplate       Boolean          @default(true)
+  status           String           @default("DRAFT") // DRAFT, ACTIVE, ARCHIVED
+  createdById      String
+  createdBy        User             @relation(fields: [createdById], references: [id])
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  sentEmails       SentEmail[]
+}
+
+model SentEmail {
+  id               String           @id @default(cuid())
+  templateId       String
+  template         EmailTemplate    @relation(fields: [templateId], references: [id])
+  recipientEmail   String
+  clientId         String?
+  client           Client?          @relation(fields: [clientId], references: [id])
+  leadId           String?
+  lead             Lead?            @relation(fields: [leadId], references: [id])
+  status           String           @default("SENT") // SENT, DELIVERED, OPENED, CLICKED, BOUNCED, SPAM, UNSUBSCRIBED
+  sentAt           DateTime         @default(now())
+  deliveredAt      DateTime?
+  openedAt         DateTime?
+  clickedAt        DateTime?
+  openCount        Int              @default(0)
+  clickCount       Int              @default(0)
+  ipAddress        String?
+  userAgent        String?
+  links            Json?            // Liens cliqués et nombre de clics
+  metadata         Json?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+model MarketingAudience {
+  id               String            @id @default(cuid())
+  companyId        String
+  company          Company           @relation(fields: [companyId], references: [id])
+  name             String
+  description      String?
+  type             String            @default("DYNAMIC") // STATIC, DYNAMIC
+  filter           Json?             // Critères de filtre pour les audiences dynamiques
+  estimatedSize    Int?
+  isActive         Boolean           @default(true)
+  createdById      String
+  createdBy        User              @relation(fields: [createdById], references: [id])
+  lastUpdateById   String
+  lastUpdatedBy    User              @relation("AudienceUpdater", fields: [lastUpdateById], references: [id])
+  lastCalculatedAt DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  members          AudienceMember[]
+  campaigns        CampaignAudience[]
+}
+
+model AudienceMember {
+  id               String            @id @default(cuid())
+  audienceId       String
+  audience         MarketingAudience @relation(fields: [audienceId], references: [id], onDelete: Cascade)
+  clientId         String?
+  client           Client?           @relation(fields: [clientId], references: [id])
+  leadId           String?
+  lead             Lead?             @relation(fields: [leadId], references: [id])
+  addedAt          DateTime          @default(now())
+  status           String            @default("ACTIVE") // ACTIVE, UNSUBSCRIBED, BOUNCED
+  customFields     Json?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model CampaignAudience {
+  campaignId       String
+  campaign         MarketingCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  audienceId       String
+  audience         MarketingAudience @relation(fields: [audienceId], references: [id], onDelete: Cascade)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@id([campaignId, audienceId])
 }
 
 enum Role {
   USER
   ADMIN
+  SUPER_ADMIN
+  COMPANY_ADMIN
+  MANAGER
+  EMPLOYEE
 }
 
 enum ProjectStatus {
@@ -62,357 +2015,23 @@ enum BillingCycle {
   YEARLY
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
-  role      Role     @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  avatar    String?  // URL de la photo de profil
-
-  tasks     Task[]   @relation("UserTasks")
-  projects  Project[] @relation("UserProjects")
-  uploads   Upload[] // Relation vers les fichiers téléchargés
+enum PermissionAction {
+  CREATE
+  READ
+  UPDATE
+  DELETE
 }
 
-model Client {
-  id        String   @id @default(cuid())
-  name      String
-  email     String?
-  phone     String?
-  logo      String?  // URL du logo
-  documents String[] // URLs des documents
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  projects  Project[]
-  payments  Payment[]
-}
-
-model Prestataire {
-  id        String   @id @default(cuid())
-  name      String
-  email     String?
-  phone     String?
-  role      String?
-  avatar    String?  // URL de la photo
-  portfolio String[] // URLs des images de portfolio
-  documents String[] // URLs des documents (certifications, etc.)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  payments  Payment[]
-  projectPrestataires ProjectPrestataire[]
-}
-
-model Project {
-  id          String         @id @default(cuid())
-  name        String
-  status      ProjectStatus  @default(PENDING_VALIDATION)
-  description String?
-  startDate   DateTime?      // Date de début du projet
-  endDate     DateTime?      // Date de fin prévue du projet
-  totalPrice  Decimal?       // Prix total du projet
-  currency    String         @default("EUR")
-  fcfaEquivalent Decimal?    // Équivalent en FCFA du prix total
-  exchangeRateDate DateTime? // Date du taux de change utilisé
-  isFixedPrice Boolean       @default(true) // Si true, prix fixe, sinon prix calculé depuis les parties
-  images      String[]       // URLs des images du projet
-  documents   String[]       // URLs des documents
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-
-  // Relation vers le client
-  clientId String?
-  client   Client?        @relation(fields: [clientId], references: [id])
-
-  // Relation vers l'utilisateur proprietaire/assignation principale
-  userId String?
-  user   User?           @relation("UserProjects", fields: [userId], references: [id])
-
-  // Relations
-  tasks         Task[]
-  payments      Payment[]
-  projectParts  ProjectPart[]    // Parties du projet avec prix individuels
-  projectPrestataires ProjectPrestataire[] // Association avec prestataires
-
-  // Many-to-many Tools
-  projectTools ProjectTool[]
-
-  // Many-to-many Agents
-  projectAgents ProjectAgent[]
-
-  // Devis
-  devis Devis[]
-  
-  // Contrats
-  contrats Contrat[]
-  
-  // Abonnements projet
-  projectSubscriptions ProjectSubscription[]
-}
-
-model ProjectPart {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  price       Decimal  @default(0.0)
-  fcfaEquivalent Decimal? // Équivalent en FCFA du prix de la partie
-  completed   Boolean  @default(false)
-  
-  // Relation vers le projet
-  projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
-  // Relation vers les tâches associées
-  tasks       Task[]
-}
-
-model ProjectPrestataire {
-  id           String    @id @default(cuid())
-  role         String?   // Rôle du prestataire dans ce projet
-  hourlyRate   Decimal?  // Taux horaire si applicable
-  fixedAmount  Decimal?  // Montant fixe si applicable
-  
-  // Relations
-  projectId     String
-  project       Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
-  prestataireId String
-  prestataire   Prestataire  @relation(fields: [prestataireId], references: [id])
-  
-  @@unique([projectId, prestataireId])
-}
-
-model Task {
-  id          String      @id @default(cuid())
-  title       String
-  description String?
-  status      TaskStatus  @default(TODO)
-  priority    TaskPriority @default(MEDIUM)
-  dueDate     DateTime?
-  estimatedHours Decimal? // Heures estimées pour cette tâche
-  actualHours   Decimal? // Heures réelles passées
-  attachments String[]    // URLs des pièces jointes
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
-  // Relation vers le projet
-  projectId String?
-  project   Project?     @relation(fields: [projectId], references: [id])
-  
-  // Relation vers la partie du projet
-  projectPartId String?
-  projectPart   ProjectPart? @relation(fields: [projectPartId], references: [id])
-
-  // Relation vers l'utilisateur affecté à la tâche
-  assignedToId String?
-  assignedTo   User?  @relation("UserTasks", fields: [assignedToId], references: [id])
-  
-  // Relation hiérarchique (sous-tâches)
-  parentTaskId String?
-  parentTask   Task?    @relation("SubTasks", fields: [parentTaskId], references: [id])
-  subTasks     Task[]   @relation("SubTasks")
-  
-  // Commentaires sur la tâche
-  comments     TaskComment[]
-}
-
-model TaskComment {
-  id        String    @id @default(cuid())
-  content   String
-  attachments String[] // URLs des pièces jointes
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  
-  // Relation vers la tâche
-  taskId    String
-  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  
-  // Auteur du commentaire (peut être un identifiant d'utilisateur)
-  authorId  String?
-}
-
-model Payment {
-  id           String       @id @default(cuid())
-  paymentType  PaymentType
-  amount       Decimal      @default(0.0)
-  date         DateTime     @default(now())
-  description  String?
-  paymentMethod PaymentMethod @default(BANK_TRANSFER)
-  status       PaymentStatus @default(PENDING)
-  reference    String?      // Numéro de référence ou facture
-  
-  // Paiement partiel ou total
-  isPartial    Boolean      @default(false)
-  partNumber   Int?         // Numéro du paiement partiel
-  totalParts   Int?         // Nombre total de paiements prévus
-
-  // Relation vers le projet
-  projectId    String?
-  project      Project?    @relation(fields: [projectId], references: [id])
-
-  // Relation vers le client
-  clientId     String?
-  client       Client?     @relation(fields: [clientId], references: [id])
-
-  // Relation vers l'abonnement
-  subscriptionId  String?
-  subscription    Subscription? @relation(fields: [subscriptionId], references: [id])
-
-  // Relation vers le prestataire
-  prestataireId  String?
-  prestataire    Prestataire?  @relation(fields: [prestataireId], references: [id])
-}
-
-model Subscription {
-  id             String       @id @default(cuid())
-  serviceName    String
-  cost           Decimal      @default(0.0)
-  billingCycle   BillingCycle @default(MONTHLY)
-  nextBillingDate DateTime
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  payments        Payment[]
-  projectSubscriptions ProjectSubscription[]
-}
-
-model ProjectSubscription {
-  id             String       @id @default(cuid())
-  startDate      DateTime     @default(now())
-  endDate        DateTime?
-  
-  // Relations
-  projectId      String
-  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
-  subscriptionId String
-  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
-  
-  @@unique([projectId, subscriptionId])
-}
-
-model Agent {
-  id          String         @id @default(cuid())
-  name        String
-  description String?
-  version     String?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-
-  projectAgents ProjectAgent[]
-}
-
-model Tool {
-  id          String         @id @default(cuid())
-  name        String
-  description String?
-  cost        Decimal        @default(0.0)
-  free        Boolean        @default(false)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-
-  projectTools ProjectTool[]
-}
-
-model ProjectAgent {
-  projectId String
-  agentId   String
-
-  project   Project @relation(fields: [projectId], references: [id])
-  agent     Agent   @relation(fields: [agentId], references: [id])
-
-  @@id([projectId, agentId])
-}
-
-model ProjectTool {
-  projectId String
-  toolId    String
-
-  project   Project @relation(fields: [projectId], references: [id])
-  tool      Tool    @relation(fields: [toolId], references: [id])
-
-  @@id([projectId, toolId])
-}
-
-model Devis {
-  id        String   @id @default(cuid())
-  reference String
-  total     Decimal  @default(0.0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  status    String?  @default("DRAFT") // DRAFT, SENT, ACCEPTED, DECLINED
-  validUntil DateTime?
-  document  String?  // URL du document de devis signé
-
-  // Relation vers le projet
-  projectId String?
-  project   Project? @relation(fields: [projectId], references: [id])
-  
-  // Éléments détaillés du devis
-  items     DevisItem[]
-}
-
-model DevisItem {
-  id          String   @id @default(cuid())
-  description String
-  quantity    Int      @default(1)
-  unitPrice   Decimal  @default(0.0)
-  total       Decimal  @default(0.0)
-  
-  // Relation vers le devis
-  devisId     String
-  devis       Devis    @relation(fields: [devisId], references: [id], onDelete: Cascade)
-}
-
-model Contrat {
-  id        String   @id @default(cuid())
-  title     String
-  content   String?
-  status    String   @default("DRAFT") // DRAFT, SENT, SIGNED, CANCELLED
-  signedAt  DateTime?
-  document  String?  // URL du document de contrat signé
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  // Relation vers le projet
-  projectId String?
-  project   Project? @relation(fields: [projectId], references: [id])
-}
-
-// Modèle pour gérer les uploads de fichiers
-model Upload {
-  id           String   @id @default(cuid())
-  fileName     String   // Nom original du fichier
-  fileSize     Int      // Taille du fichier en octets
-  fileType     String   // Type MIME du fichier
-  filePath     String   // Chemin relatif du fichier sur le serveur
-  publicUrl    String   // URL publique pour accéder au fichier
-  uploadType   String   // Type d'upload: 'avatar', 'client', 'provider', 'document', etc.
-  relatedId    String?  // ID de l'entité liée (client, prestataire, etc.)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  // Relation vers l'utilisateur qui a téléchargé le fichier
-  userId       String
-  user         User     @relation(fields: [userId], references: [id])
-
-  @@index([uploadType, relatedId])
-}
-
-// Table pour stocker les taux de change
-model ExchangeRate {
-  id          String    @id @default(cuid())
-  sourceCurrency String
-  targetCurrency String
-  rate        Decimal
-  date        DateTime  @default(now())
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@unique([sourceCurrency, targetCurrency, date])
-  @@index([date])
+enum ResourceType {
+  USER
+  COMPANY
+  CLIENT
+  PROJECT
+  TASK
+  PAYMENT
+  INVOICE
+  PRODUCT
+  LEAD
+  OPPORTUNITY
+  OTHER
 }

@@ -1,21 +1,42 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { z } from 'zod';
 import bcrypt from 'bcryptjs';
+import { prisma } from '../../../../lib/prisma';
 import { sendEmail, EmailTemplates } from '@/lib/services/email-service';
 
-const prisma = new PrismaClient();
+// Schéma de validation pour l'inscription
+const signupSchema = z.object({
+  name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
+  email: z.string().email('Adresse email invalide'),
+  password: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères'),
+  role: z.enum(['USER', 'COMPANY_ADMIN']).optional(),
+  companyId: z.string().optional(),
+  companyName: z.string().optional(),
+  createNewCompany: z.boolean().optional(),
+});
 
 export async function POST(req: Request) {
   try {
-    const { name, email, password } = await req.json();
-
-    // Validation des entrées
-    if (!email || !password) {
+    const body = await req.json();
+    
+    // Valider les données d'entrée
+    const validationResult = signupSchema.safeParse(body);
+    if (!validationResult.success) {
       return NextResponse.json(
-        { message: 'Email et mot de passe requis' },
+        { message: 'Données invalides', errors: validationResult.error.format() },
         { status: 400 }
       );
     }
+    
+    const { 
+      name, 
+      email, 
+      password, 
+      role = 'USER', 
+      companyId, 
+      companyName,
+      createNewCompany 
+    } = validationResult.data;
 
     // Vérifier si l'utilisateur existe déjà
     const existingUser = await prisma.user.findUnique({
@@ -29,16 +50,30 @@ export async function POST(req: Request) {
       );
     }
 
-    // Hachage du mot de passe
+    // Hashage du mot de passe
     const hashedPassword = await bcrypt.hash(password, 10);
-
+    
+    let newCompanyId = companyId;
+    
+    // Créer une nouvelle entreprise si nécessaire
+    if (createNewCompany && companyName) {
+      const newCompany = await prisma.company.create({
+        data: {
+          name: companyName,
+          email,
+        }
+      });
+      newCompanyId = newCompany.id;
+    }
+    
     // Création de l'utilisateur
     const user = await prisma.user.create({
       data: {
-        name: name || '',
+        name,
         email,
         password: hashedPassword,
-        role: 'USER',
+        role: role,
+        companyId: newCompanyId,
       },
     });
 

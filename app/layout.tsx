@@ -4,6 +4,8 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner"
 import { NextAuthProvider } from "@/providers/NextAuthProvider";
 import { ThemeProvider } from "@/providers/ThemeProvider";
+import { Providers } from "./providers";
+import { cn } from "@/lib/utils";
 
 const ubuntu = Ubuntu({
   weight: ['300', '400', '500', '700'],
@@ -12,8 +14,8 @@ const ubuntu = Ubuntu({
 });
 
 export const metadata: Metadata = {
-  title: "Rêvolis",
-  description: "Application de gestion et suivi de projets",
+  title: "Revolis - Logiciel de gestion",
+  description: "Application de gestion intégrée pour les entreprises",
 };
 
 export default function RootLayout({
@@ -23,13 +25,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr" suppressHydrationWarning>
-      <body className={`${ubuntu.variable} font-sans antialiased`}>
-        <NextAuthProvider>
-          <ThemeProvider defaultTheme="system">
-            {children}
-            <Toaster />
-          </ThemeProvider>
-        </NextAuthProvider>
+      <body
+        className={cn(
+          "min-h-screen bg-background font-sans antialiased",
+          ubuntu.variable
+        )}
+      >
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

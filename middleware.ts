@@ -1,65 +1,91 @@
 import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { NextRequestWithAuth, withAuth } from 'next-auth/middleware';
+import { NextRequest } from 'next/server';
+import { Role } from '@prisma/client';
 
-// Fonction qui vérifie si l'URL est une API
-const isApiRoute = (pathname: string) => {
-  return pathname.startsWith('/api');
+// Tableau de routes protégées par rôle
+const protectedRoutes = {
+  dashboard: ['USER', 'ADMIN', 'SUPER_ADMIN', 'COMPANY_ADMIN', 'MANAGER', 'EMPLOYEE'],
+  admin: ['ADMIN', 'SUPER_ADMIN'],
+  superadmin: ['SUPER_ADMIN'],
+  companyAdmin: ['SUPER_ADMIN', 'COMPANY_ADMIN'],
 };
 
-// Middleware d'authentification amélioré
-export default withAuth(
-  async function middleware(req: NextRequestWithAuth) {
-    const token = await getToken({ req });
-    const isAuth = !!token;
-    const { pathname } = req.nextUrl;
-
-    // Ne pas interférer avec les routes API
-    if (isApiRoute(pathname)) {
-      return NextResponse.next();
-    }
-
-    const isProtectedRoute = (
-      pathname.startsWith('/pro') || 
-      pathname.startsWith('/perso')
-    );
-    
-    const isAuthRoute = pathname.startsWith('/auth');
-
-    // Rediriger vers la page de connexion si l'utilisateur n'est pas connecté et tente d'accéder à une route protégée
-    if (!isAuth && isProtectedRoute) {
-      // Créer une URL pour la redirection avec un paramètre callbackUrl
-      const signInUrl = new URL('/auth/signin', req.url);
-      // Le callbackUrl est plus fiable que sessionStorage pour les navigations directes
-      signInUrl.searchParams.set('callbackUrl', pathname);
-      return NextResponse.redirect(signInUrl);
-    }
-
-    // Si l'utilisateur est déjà connecté et tente d'accéder à la page de connexion ou d'inscription
-    if (isAuth && isAuthRoute) {
-      // Si une URL de retour est spécifiée, rediriger vers cette URL
-      const callbackUrl = req.nextUrl.searchParams.get('callbackUrl');
-      if (callbackUrl && callbackUrl !== '/auth/signin' && callbackUrl !== '/auth/signup') {
-        return NextResponse.redirect(new URL(callbackUrl, req.url));
-      }
-      // Sinon, rediriger vers la page d'accueil
-      return NextResponse.redirect(new URL('/', req.url));
-    }
-
+export async function middleware(req: NextRequest) {
+  const path = req.nextUrl.pathname;
+  
+  // Routes publiques - pas besoin d'authentification
+  if (
+    path === '/' || 
+    path === '/auth/signin' || 
+    path === '/auth/signup' || 
+    path.startsWith('/api/auth/')
+  ) {
     return NextResponse.next();
-  },
-  {
-    callbacks: {
-      authorized: ({ token }) => true, // Ne pas bloquer l'accès ici, laisser la logique du middleware s'en charger
-    },
   }
-);
 
-// Configuration pour appliquer le middleware seulement aux routes spécifiées
+  // Vérifier le token d'authentification
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const isAuthenticated = !!token;
+
+  // Rediriger vers la connexion si non authentifié
+  if (!isAuthenticated) {
+    const url = new URL('/auth/signin', req.url);
+    url.searchParams.set('callbackUrl', encodeURI(req.url));
+    return NextResponse.redirect(url);
+  }
+
+  // Vérifier les permissions basées sur les rôles
+  const userRole = token.role as Role;
+
+  // Vérifier les permissions pour les routes protégées
+  if (path.startsWith('/dashboard') && !protectedRoutes.dashboard.includes(userRole)) {
+    return NextResponse.redirect(new URL('/access-denied', req.url));
+  }
+
+  if (path.startsWith('/admin') && !protectedRoutes.admin.includes(userRole)) {
+    return NextResponse.redirect(new URL('/access-denied', req.url));
+  }
+
+  if (path.startsWith('/superadmin') && !protectedRoutes.superadmin.includes(userRole)) {
+    return NextResponse.redirect(new URL('/access-denied', req.url));
+  }
+
+  if (path.startsWith('/company-admin') && !protectedRoutes.companyAdmin.includes(userRole)) {
+    return NextResponse.redirect(new URL('/access-denied', req.url));
+  }
+
+  // Ajouter l'ID utilisateur et le rôle aux en-têtes pour les API
+  if (path.startsWith('/api/') && path !== '/api/auth') {
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set('x-user-id', token.id as string);
+    requestHeaders.set('x-user-role', userRole);
+    
+    if (token.companyId) {
+      requestHeaders.set('x-company-id', token.companyId as string);
+    }
+    
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
+  }
+
+  return NextResponse.next();
+}
+
 export const config = {
   matcher: [
-    '/pro/:path*', 
-    '/perso/:path*', 
-    '/auth/:path*'
+    // Matcher pour routes qui nécessitent une authentification
+    '/dashboard/:path*',
+    '/admin/:path*',
+    '/superadmin/:path*',
+    '/company-admin/:path*',
+    '/api/:path*',
+    // Routes publiques (pour skipper)
+    '/',
+    '/auth/signin',
+    '/auth/signup',
   ],
 }; 

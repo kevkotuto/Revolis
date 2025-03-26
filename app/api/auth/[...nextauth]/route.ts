@@ -2,34 +2,10 @@
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
+import { Role } from '@prisma/client';
 
-// Étendre les types de NextAuth
-declare module "next-auth" {
-  interface User {
-    id: string;
-    role: "USER" | "ADMIN";
-  }
-  
-  interface Session {
-    user: {
-      id: string;
-      email: string;
-      name?: string;
-      role: "USER" | "ADMIN";
-    }
-  }
-}
-
-declare module "next-auth/jwt" {
-  interface JWT {
-    id: string;
-    role: "USER" | "ADMIN";
-  }
-}
-
-const prisma = new PrismaClient();
-
+// Configuration des options
 const handler = NextAuth({
   providers: [
     CredentialsProvider({
@@ -38,47 +14,64 @@ const handler = NextAuth({
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error('Email et mot de passe requis.');
+          return null;
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        });
+        try {
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email },
+          });
 
-        if (!user) {
-          throw new Error('Email ou mot de passe incorrect.');
+          if (!user) {
+            return null;
+          }
+
+          const isValid = await bcrypt.compare(credentials.password, user.password);
+          if (!isValid) {
+            return null;
+          }
+
+          // Retour adapté aux types attendus par NextAuth
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name || undefined, // Utiliser undefined au lieu de null
+            role: user.role,
+            companyId: user.companyId || undefined // Utiliser undefined au lieu de null
+          };
+        } catch (error) {
+          console.error('Erreur d\'authentification:', error);
+          return null;
         }
-
-        const isValid = await bcrypt.compare(credentials.password, user.password);
-        if (!isValid) {
-          throw new Error('Email ou mot de passe incorrect.');
-        }
-
-        return { 
-          id: user.id, 
-          email: user.email, 
-          name: user.name || undefined, 
-          role: user.role 
-        };
       },
     }),
   ],
-  session: { strategy: 'jwt' },
-  pages: { signIn: '/auth/signin' },
+  session: { 
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 jours
+  },
+  pages: { 
+    signIn: '/auth/signin',
+    error: '/auth/error',
+  },
   callbacks: {
+    // Ajout des informations personnalisées au token
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.companyId = user.companyId;
       }
       return token;
     },
+    // Construction de la session à partir du token
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as "USER" | "ADMIN";
+      if (session.user) {
+        session.user.id = token.id;
+        session.user.role = token.role;
+        session.user.companyId = token.companyId;
       }
       return session;
     },
